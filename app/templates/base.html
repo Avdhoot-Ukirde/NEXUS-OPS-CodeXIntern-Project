@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}NEXUS-OPS | Integrated Hardware & Software Lifecycle{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <style>
+    .active-tab {
+      background-color: var(--bg-tertiary) !important;
+      color: #ffffff !important;
+      border-bottom: 2px solid #38bdf8 !important;
+    }
+  </style>
+</head>
+<body>
+  <!-- Navigation Topbar -->
+  <header class="glass-nav" style="position: sticky; top: 0; z-index: 50; padding: 12px 24px;">
+    <div style="max-width: 1400px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+      <div style="display: flex; align-items: center; gap: 14px;">
+        <a href="/" style="text-decoration: none; display: flex; align-items: center; gap: 10px;">
+          <div style="background: linear-gradient(135deg, #2563eb, #38bdf8); width: 34px; height: 34px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: 800; color: white; font-size: 1.1rem; box-shadow: 0 0 12px rgba(56, 189, 248, 0.4);">
+            NX
+          </div>
+          <div>
+            <span style="font-weight: 800; font-size: 1.15rem; letter-spacing: -0.02em; color: #ffffff;">NEXUS<span style="color: #38bdf8;">-OPS</span></span>
+            <div style="font-size: 0.68rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.08em; line-height: 1;">Hardware & Software Engineering</div>
+          </div>
+        </a>
+
+        <!-- 5-Stage Quick Sitemap Indicator -->
+        <nav style="display: none; @media(min-width: 900px){ display: flex; } align-items: center; gap: 6px; margin-left: 20px; font-size: 0.75rem; color: var(--text-dim);">
+          <span style="color: var(--stage-design);">1. Design</span>
+          <span>→</span>
+          <span style="color: var(--stage-purchase);">2. Purchase</span>
+          <span>→</span>
+          <span style="color: var(--stage-assembly);">3. Assembly</span>
+          <span>→</span>
+          <span style="color: var(--stage-software);">4. Software</span>
+          <span>→</span>
+          <span style="color: var(--stage-dispatch);">5. Dispatch</span>
+        </nav>
+      </div>
+
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <a href="/" class="nexus-btn nexus-btn-secondary" style="text-decoration: none; font-size: 0.8rem; padding: 6px 12px;">
+          Projects Dashboard
+        </a>
+        <button class="nexus-btn nexus-btn-primary" style="font-size: 0.8rem; padding: 6px 14px;" onclick="openModal('modal-create-project')">
+          + New Project
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content Body -->
+  <main style="max-width: 1400px; margin: 0 auto; padding: 24px; min-height: calc(100vh - 120px);">
+    {% block content %}{% endblock %}
+  </main>
+
+  <!-- Global Footer -->
+  <footer style="border-top: 1px solid var(--border-subtle); padding: 20px 24px; text-align: center; color: var(--text-dim); font-size: 0.8rem;">
+    <div style="max-width: 1400px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+      <div>NEXUS-OPS Enterprise • Integrated Engineering Project Management Platform</div>
+      <div>Zero Fragmented Tracking: CAD • BOM • Traveler • Firmware • Dispatch</div>
+    </div>
+  </footer>
+
+  <!-- Toast Notification Root -->
+  <div id="toast-container"></div>
+
+  <!-- Global Scripts -->
+  <script src="{{ url_for('static', filename='js/modal.js') }}"></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>
+

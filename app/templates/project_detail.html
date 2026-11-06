@@ -1,0 +1,1061 @@
+{% extends "base.html" %}
+
+{% block title %}{{ project.code }} | Engineering Cockpit | NEXUS-OPS{% endblock %}
+
+{% block content %}
+<div id="project-cockpit-root" data-project-id="{{ project.id }}">
+
+  <!-- Top Hero Header -->
+  <div class="nexus-card" style="padding: 24px; margin-bottom: 24px;">
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 16px; margin-bottom: 16px;">
+      <div>
+        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 6px;">
+          <a href="/" style="color: var(--text-dim); text-decoration: none; font-size: 0.85rem;">← All Projects</a>
+          <span style="color: var(--border-accent);">/</span>
+          <span style="font-family: monospace; font-size: 1rem; font-weight: 700; color: #38bdf8; background: var(--bg-primary); padding: 3px 10px; border-radius: 6px; border: 1px solid var(--border-subtle);">{{ project.code }}</span>
+          <span class="stage-pill {{ project.current_stage.lower() }}">{{ project.current_stage }}</span>
+          <span class="badge-health health-{{ project.health_status.lower().replace(' ', '-') }}">
+            <span class="pulse-dot {{ 'green' if project.health_status == 'On Track' else ('red' if project.health_status == 'Blocked' else 'amber') }}"></span>
+            {{ project.health_status }}
+          </span>
+        </div>
+        <h1 style="font-size: 1.8rem; font-weight: 800; color: #ffffff;">{{ project.name }}</h1>
+        <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 4px; max-width: 850px;">{{ project.description or 'No project description recorded.' }}</p>
+      </div>
+
+      <!-- Quick Action Buttons -->
+      <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+        <button class="nexus-btn nexus-btn-secondary" onclick="exportProjectJSON()">
+          <span>Export JSON 📥</span>
+        </button>
+        <button class="nexus-btn nexus-btn-primary" onclick="openModal('modal-advance-stage')">
+          <span>Advance Stage ⇥</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Metadata Strip -->
+    <div style="display: flex; gap: 24px; flex-wrap: wrap; font-size: 0.85rem; border-top: 1px solid var(--border-subtle); padding-top: 14px;">
+      <div>
+        <span style="color: var(--text-dim); text-transform: uppercase; font-size: 0.7rem; font-weight: 600; display: block;">Lead Engineer</span>
+        <strong style="color: var(--text-main);">{{ project.lead_engineer }}</strong>
+      </div>
+      <div>
+        <span style="color: var(--text-dim); text-transform: uppercase; font-size: 0.7rem; font-weight: 600; display: block;">Target Delivery Date</span>
+        <strong style="color: var(--text-main);">{{ project.target_date.strftime('%b %d, %Y') if project.target_date else 'Not Scheduled' }}</strong>
+      </div>
+      <div>
+        <span style="color: var(--text-dim); text-transform: uppercase; font-size: 0.7rem; font-weight: 600; display: block;">Total Spend vs Budget</span>
+        <strong style="color: var(--text-main);">${{ "{:,.2f}".format(project.actual_cost) }} / ${{ "{:,.2f}".format(project.budget) }}</strong>
+      </div>
+      <div>
+        <span style="color: var(--text-dim); text-transform: uppercase; font-size: 0.7rem; font-weight: 600; display: block;">System Priority</span>
+        <span style="font-weight: 700; color: {{ '#ef4444' if project.priority == 'Critical' else '#38bdf8' }};">{{ project.priority }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Stage Navigation Tabs -->
+  <div style="display: flex; gap: 6px; border-bottom: 1px solid var(--border-subtle); margin-bottom: 24px; overflow-x: auto; padding-bottom: 2px;">
+    <button class="nexus-btn cockpit-tab-btn active-tab" data-tab="design" style="border-radius: 8px 8px 0 0; font-size: 0.85rem; padding: 10px 18px; background: transparent; color: var(--text-muted);">
+      <span style="color: var(--stage-design);">1.</span> Design & CAD
+    </button>
+    <button class="nexus-btn cockpit-tab-btn" data-tab="purchase" style="border-radius: 8px 8px 0 0; font-size: 0.85rem; padding: 10px 18px; background: transparent; color: var(--text-muted);">
+      <span style="color: var(--stage-purchase);">2.</span> Purchase & BOM
+    </button>
+    <button class="nexus-btn cockpit-tab-btn" data-tab="assembly" style="border-radius: 8px 8px 0 0; font-size: 0.85rem; padding: 10px 18px; background: transparent; color: var(--text-muted);">
+      <span style="color: var(--stage-assembly);">3.</span> Shop Assembly & Traveler
+    </button>
+    <button class="nexus-btn cockpit-tab-btn" data-tab="software" style="border-radius: 8px 8px 0 0; font-size: 0.85rem; padding: 10px 18px; background: transparent; color: var(--text-muted);">
+      <span style="color: var(--stage-software);">4.</span> Firmware & Software
+    </button>
+    <button class="nexus-btn cockpit-tab-btn" data-tab="dispatch" style="border-radius: 8px 8px 0 0; font-size: 0.85rem; padding: 10px 18px; background: transparent; color: var(--text-muted);">
+      <span style="color: var(--stage-dispatch);">5.</span> Final QA & Dispatch
+    </button>
+    <button class="nexus-btn cockpit-tab-btn" data-tab="activity" style="border-radius: 8px 8px 0 0; font-size: 0.85rem; padding: 10px 18px; background: transparent; color: var(--text-muted); margin-left: auto;">
+      <span>Audit Trail ⏱️</span>
+    </button>
+  </div>
+
+  <!-- PANEL 1: DESIGN -->
+  <div id="panel-design" class="stage-panel" style="display: block;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+      <div>
+        <h2 style="font-size: 1.25rem; font-weight: 700; color: #ffffff;">Stage 1: CAD & Schematic Approvals</h2>
+        <p style="font-size: 0.8rem; color: var(--text-dim);">Verify hardware revisions, architectural specifications, and sign-offs before procurement.</p>
+      </div>
+      <div style="display: flex; gap: 8px;">
+        <button class="nexus-btn nexus-btn-secondary" onclick="openModal('modal-add-eco')">+ Raise ECO</button>
+        <button class="nexus-btn nexus-btn-primary" onclick="openModal('modal-add-cad')">+ Register CAD / Doc</button>
+      </div>
+    </div>
+
+    <!-- CAD Documents Table -->
+    <div class="nexus-card" style="overflow: hidden; margin-bottom: 24px;">
+      <table class="nexus-table">
+        <thead>
+          <tr>
+            <th>Document Title & Subsystem</th>
+            <th>Revision</th>
+            <th>Type</th>
+            <th>Author</th>
+            <th>Status</th>
+            <th style="text-align: right;">Engineering Sign-off</th>
+          </tr>
+        </thead>
+        <tbody id="cad-docs-tbody">
+          <tr><td colspan="6" style="text-align: center; color: var(--text-dim); padding: 20px;">Loading CAD documents...</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- ECO Tracker Section -->
+    <div class="nexus-card" style="padding: 20px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+        <h3 style="font-size: 1rem; font-weight: 700; color: #ffffff;">Engineering Change Orders (ECO)</h3>
+        <span style="font-size: 0.75rem; color: var(--text-dim);">Unresolved Critical ECOs block Assembly stage transition</span>
+      </div>
+      <div id="eco-list">
+        <div style="text-align: center; color: var(--text-dim); padding: 16px;">Loading ECOs...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PANEL 2: PURCHASE & BOM -->
+  <div id="panel-purchase" class="stage-panel" style="display: none;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+      <div>
+        <h2 style="font-size: 1.25rem; font-weight: 700; color: #ffffff;">Stage 2: Bill of Materials & Procurement Readiness</h2>
+        <p style="font-size: 0.8rem; color: var(--text-dim);">Track component lead times, supplier purchase orders, and stock readiness.</p>
+      </div>
+      <button class="nexus-btn nexus-btn-primary" onclick="openModal('modal-add-bom')">+ Add Component to BOM</button>
+    </div>
+
+    <!-- BOM Metric Cards -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin-bottom: 20px;">
+      <div class="nexus-card" style="padding: 14px;">
+        <div style="font-size: 0.7rem; color: var(--text-dim); text-transform: uppercase;">Procurement Readiness</div>
+        <div id="bom-metric-readiness" style="font-size: 1.6rem; font-weight: 800; color: #fbbf24; margin-top: 4px;">-%</div>
+      </div>
+      <div class="nexus-card" style="padding: 14px;">
+        <div style="font-size: 0.7rem; color: var(--text-dim); text-transform: uppercase;">Total BOM Spend</div>
+        <div id="bom-metric-cost" style="font-size: 1.6rem; font-weight: 800; color: #ffffff; margin-top: 4px;">$-</div>
+      </div>
+      <div class="nexus-card" style="padding: 14px;">
+        <div style="font-size: 0.7rem; color: var(--text-dim); text-transform: uppercase;">Delivered Components</div>
+        <div id="bom-metric-parts" style="font-size: 1.6rem; font-weight: 800; color: #38bdf8; margin-top: 4px;">- / -</div>
+      </div>
+    </div>
+
+    <!-- BOM Table -->
+    <div class="nexus-card" style="overflow-x: auto;">
+      <table class="nexus-table">
+        <thead>
+          <tr>
+            <th>Manufacturer Part Number (MPN)</th>
+            <th>Category</th>
+            <th>Qty (Recv / Req)</th>
+            <th>Unit Cost</th>
+            <th>Total Cost</th>
+            <th>Supplier & Lead Time</th>
+            <th>Procurement Status</th>
+            <th style="text-align: right;">Action</th>
+          </tr>
+        </thead>
+        <tbody id="bom-tbody">
+          <tr><td colspan="8" style="text-align: center; color: var(--text-dim); padding: 24px;">Loading BOM...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- PANEL 3: ASSEMBLY & SHOP TRAVELER -->
+  <div id="panel-assembly" class="stage-panel" style="display: none;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+      <div>
+        <h2 style="font-size: 1.25rem; font-weight: 700; color: #ffffff;">Stage 3: Physical Assembly & Shop-Floor Traveler</h2>
+        <p style="font-size: 0.8rem; color: var(--text-dim);">Milestone traveler tracking (SMT, AOI, Power Rails, Mechanical fit, Burn-in) and defect logging.</p>
+      </div>
+      <button class="nexus-btn nexus-btn-primary" onclick="openModal('modal-add-unit')">+ Register Physical Unit</button>
+    </div>
+
+    <div id="assembly-units-container">
+      <div style="text-align: center; color: var(--text-dim); padding: 24px;">Loading physical build units...</div>
+    </div>
+  </div>
+
+  <!-- PANEL 4: SOFTWARE & TESTS -->
+  <div id="panel-software" class="stage-panel" style="display: none;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+      <div>
+        <h2 style="font-size: 1.25rem; font-weight: 700; color: #ffffff;">Stage 4: Firmware Releases & Testing Checklists</h2>
+        <p style="font-size: 0.8rem; color: var(--text-dim);">Release version control, MCU flashing records, and Hardware-In-The-Loop (HIL) / safety verification.</p>
+      </div>
+      <div style="display: flex; gap: 8px;">
+        <button class="nexus-btn nexus-btn-secondary" onclick="openModal('modal-add-test')">+ Add Test Checklist</button>
+        <button class="nexus-btn nexus-btn-primary" onclick="openModal('modal-add-firmware')">+ Tag Firmware Release</button>
+      </div>
+    </div>
+
+    <!-- Software Metric Cards -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin-bottom: 20px;">
+      <div class="nexus-card" style="padding: 14px;">
+        <div style="font-size: 0.7rem; color: var(--text-dim); text-transform: uppercase;">Software Test Pass Rate</div>
+        <div id="sw-metric-passrate" style="font-size: 1.6rem; font-weight: 800; color: #34d399; margin-top: 4px;">-%</div>
+      </div>
+      <div class="nexus-card" style="padding: 14px;">
+        <div style="font-size: 0.7rem; color: var(--text-dim); text-transform: uppercase;">Completed Checklists</div>
+        <div id="sw-metric-tests" style="font-size: 1.6rem; font-weight: 800; color: #ffffff; margin-top: 4px;">- / -</div>
+      </div>
+    </div>
+
+    <!-- Firmware Releases Section -->
+    <div class="nexus-card" style="padding: 16px; margin-bottom: 20px;">
+      <h3 style="font-size: 1rem; font-weight: 700; color: #ffffff; margin-bottom: 12px;">Firmware Release Artifacts & Checksums</h3>
+      <div id="firmware-releases-container">
+        <div style="text-align: center; color: var(--text-dim); padding: 12px;">Loading releases...</div>
+      </div>
+    </div>
+
+    <!-- Software Tests Checklist Table -->
+    <div class="nexus-card" style="overflow-x: auto;">
+      <table class="nexus-table">
+        <thead>
+          <tr>
+            <th>Test Name & Suite</th>
+            <th>Type</th>
+            <th>Expected Behavior</th>
+            <th>Verdict</th>
+            <th>Execution Log</th>
+            <th style="text-align: right;">Action</th>
+          </tr>
+        </thead>
+        <tbody id="software-tests-tbody">
+          <tr><td colspan="6" style="text-align: center; color: var(--text-dim); padding: 24px;">Loading tests...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- PANEL 5: DISPATCH & QA -->
+  <div id="panel-dispatch" class="stage-panel" style="display: none;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+      <div>
+        <h2 style="font-size: 1.25rem; font-weight: 700; color: #ffffff;">Stage 5: Final QA Certification & Logistics Dispatch</h2>
+        <p style="font-size: 0.8rem; color: var(--text-dim);">Verify dielectric withstand (Hi-Pot), ESD immunity, packaging checklists, and shipping tracking.</p>
+      </div>
+      <div style="display: flex; gap: 8px;">
+        <button class="nexus-btn nexus-btn-secondary" onclick="openModal('modal-add-shipment')">+ Dispatch Shipment</button>
+        <button class="nexus-btn nexus-btn-primary" onclick="openModal('modal-add-qacert')">+ Issue QA Certificate</button>
+      </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; margin-bottom: 20px;">
+      <!-- QA Certifications Card -->
+      <div class="nexus-card" style="padding: 16px;">
+        <h3 style="font-size: 1rem; font-weight: 700; color: #ffffff; margin-bottom: 12px;">Compliance & Safety Certifications</h3>
+        <div id="dispatch-certs-container">
+          <div style="text-align: center; color: var(--text-dim); padding: 12px;">Loading QA certificates...</div>
+        </div>
+      </div>
+
+      <!-- Packaging Checklist Card -->
+      <div class="nexus-card" style="padding: 16px;">
+        <h3 style="font-size: 1rem; font-weight: 700; color: #ffffff; margin-bottom: 12px;">Final Packaging & Accessory Checklist</h3>
+        <div id="packaging-checklist-container">
+          <div style="text-align: center; color: var(--text-dim); padding: 12px;">Loading packaging checklist...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Shipments & Tracking -->
+    <div class="nexus-card" style="padding: 16px;">
+      <h3 style="font-size: 1rem; font-weight: 700; color: #ffffff; margin-bottom: 12px;">Logistics & Carrier Shipments</h3>
+      <div id="dispatch-shipments-container">
+        <div style="text-align: center; color: var(--text-dim); padding: 12px;">Loading shipments...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PANEL: AUDIT TRAIL -->
+  <div id="panel-activity" class="stage-panel" style="display: none;">
+    <div class="nexus-card" style="padding: 24px;">
+      <h2 style="font-size: 1.25rem; font-weight: 700; color: #ffffff; margin-bottom: 6px;">Lifecycle Audit Trail & Engineering History</h2>
+      <p style="font-size: 0.8rem; color: var(--text-dim); margin-bottom: 20px;">Immutable chronological record of approvals, ECOs, BOM updates, traveler steps, and tests.</p>
+      <div id="activity-log-timeline">
+        <div style="text-align: center; color: var(--text-dim); padding: 24px;">Loading activity history...</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ================= MODALS ================= -->
+
+<!-- MODAL: ADD CAD / SCHEMATIC -->
+<div id="modal-add-cad" class="modal-overlay">
+  <div class="modal-container">
+    <div style="padding: 20px; border-bottom: 1px solid var(--border-subtle); display: flex; justify-content: space-between; align-items: center;">
+      <h3 style="color: #fff; font-size: 1.1rem; font-weight: 700;">Register CAD / Schematic Document</h3>
+      <button class="nexus-btn nexus-btn-secondary" style="padding: 2px 6px;" onclick="closeModal('modal-add-cad')">✕</button>
+    </div>
+    <form id="form-add-cad" style="padding: 20px;" onsubmit="handleAddCAD(event)">
+      <div style="margin-bottom: 12px;">
+        <label style="display: block; font-size: 0.75rem; color: var(--text-dim); margin-bottom: 4px;">Document Title *</label>
+        <input type="text" name="title" class="nexus-input" placeholder="e.g. Battery Management System (BMS) Schematic" required>
+      </div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+        <div>
+          <label style="display: block; font-size: 0.75rem; color: var(--text-dim); margin-bottom: 4px;">Doc Type *</label>
+          <select name="doc_type" class="nexus-input">
+            <option value="Schematic">Schematic</option>
+            <option value="PCB Layout">PCB Layout</option>
+            <option value="Mechanical CAD">Mechanical CAD</option>
+            <option value="Wiring Harness">Wiring Harness</option>
+            <option value="Architecture Spec">Architecture Spec</option>
+          </select>
+        </div>
+        <div>
+          <label style="display: block; font-size: 0.75rem; color: var(--text-dim); margin-bottom: 4px;">Revision *</label>
+          <input type="text" name="version" class="nexus-input" value="Rev 1.0" required>
+        </div>
+      </div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px;">
+        <div>
+          <label style="display: block; font-size: 0.75rem; color: var(--text-dim); margin-bottom: 4px;">Subsystem *</label>
+          <input type="text" name="subsystem" class="nexus-input" placeholder="e.g. Power Management" required>
+        </div>
+        <div>
+          <label style="display: block; font-size: 0.75rem; color: var(--text-dim); margin-bottom: 4px;">Author Engineer *</label>
+          <input type="text" name="author" class="nexus-input" value="{{ project.lead_engineer }}" required>
+        </div>
+      </div>
+      <div style="display: flex; justify-content: flex-end; gap: 8px;">
+        <button type="button" class="nexus-btn nexus-btn-secondary" onclick="closeModal('modal-add-cad')">Cancel</button>
+        <button type="submit" class="nexus-btn nexus-btn-primary">Register Document</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- MODAL: RAISE ECO -->
+<div id="modal-add-eco" class="modal-overlay">
+  <div class="modal-container">
+    <div style="padding: 20px; border-bottom: 1px solid var(--border-subtle); display: flex; justify-content: space-between; align-items: center;">
+      <h3 style="color: #fff; font-size: 1.1rem; font-weight: 700;">Raise Engineering Change Order (ECO)</h3>
+      <button class="nexus-btn nexus-btn-secondary" style="padding: 2px 6px;" onclick="closeModal('modal-add-eco')">✕</button>
+    </div>
+    <form id="form-add-eco" style="padding: 20px;" onsubmit="handleAddECO(event)">
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+        <div>
+          <label style="display: block; font-size: 0.75rem; color: var(--text-dim); margin-bottom: 4px;">ECO Number *</label>
+          <input type="text" name="eco_number" class="nexus-input" placeholder="e.g. ECO-2026-050" required style="font-family: monospace;">
+        </div>
+        <div>
+          <label style="display: block; font-size: 0.75rem; color: var(--text-dim); margin-bottom: 4px;">Severity *</label>
+          <select name="severity" class="nexus-input">
+            <option value="Critical">Critical (Blocks Assembly Gate)</option>
+            <option value="High">High</option>
+            <option value="Medium" selected>Medium</option>
+            <option value="Low">Low</option>
+          </select>
+        </div>
+      </div>
+      <div style="margin-bottom: 12px;">
+        <label style="display: block; font-size: 0.75rem; color: var(--text-dim); margin-bottom: 4px;">ECO Title *</label>
+        <input type="text" name="title" class="nexus-input" placeholder="e.g. Add Flyback Diode Across Solenoid Gate" required>
+      </div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+        <div>
+          <label style="display: block; font-size: 0.75rem; color: var(--text-dim); margin-bottom: 4px;">Reason Category</label>
+          <select name="reason" class="nexus-input">
+            <option value="Thermal Optimization">Thermal Optimization</option>
+            <option value="Component Obsolescence">Component Obsolescence</option>
+            <option value="Signal Integrity Bug">Signal Integrity Bug</option>
+            <option value="Cost Reduction">Cost Reduction</option>
+            <option value="Safety Hazard">Safety Hazard</option>
+          </select>
+        </div>
+        <div>
+          <label style="display: block; font-size: 0.75rem; color: var(--text-dim); margin-bottom: 4px;">Affected Subsystems *</label>
+          <input type="text" name="affected_subsystems" class="nexus-input" placeholder="e.g. Motor Driver PCB" required>
+        </div>
+      </div>
+      <div style="margin-bottom: 16px;">
+        <label style="display: block; font-size: 0.75rem; color: var(--text-dim); margin-bottom: 4px;">Technical Description & Mitigation *</label>
+        <textarea name="description" class="nexus-input" rows="3" required></textarea>
+      </div>
+      <div style="display: flex; justify-content: flex-end; gap: 8px;">
+        <button type="button" class="nexus-btn nexus-btn-secondary" onclick="closeModal('modal-add-eco')">Cancel</button>
+        <button type="submit" class="nexus-btn nexus-btn-primary">Submit ECO</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- MODAL: ADD BOM COMPONENT -->
+<div id="modal-add-bom" class="modal-overlay">
+  <div class="modal-container">
+    <div style="padding: 20px; border-bottom: 1px solid var(--border-subtle); display: flex; justify-content: space-between; align-items: center;">
+      <h3 style="color: #fff; font-size: 1.1rem; font-weight: 700;">Add Component to Bill of Materials</h3>
+      <button class="nexus-btn nexus-btn-secondary" style="padding: 2px 6px;" onclick="closeModal('modal-add-bom')">✕</button>
+    </div>
+    <form id="form-add-bom" style="padding: 20px;" onsubmit="handleAddBOM(event)">
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+        <div>
+          <label style="display: block; font-size: 0.75rem; color: var(--text-dim); margin-bottom: 4px;">Manufacturer Part Number (MPN) *</label>
+          <input type="text" name="manufacturer_pn" class="nexus-input" placeholder="e.g. STM32H753IIT6" required>
+        </div>
+        <div>
+          <label style="display: block; font-size: 0.75rem; color: var(--text-dim); margin-bottom: 4px;">Internal Part Number (IPN) *</label>
+          <input type="text" name="part_number" class="nexus-input" placeholder="e.g. IPN-MCU-001" required>
+        </div>
+      </div>
+      <div style="margin-bottom: 12px;">
+        <label style="display: block; font-size: 0.75rem; color: var(--text-dim); margin-bottom: 4px;">Description *</label>
+        <input type="text" name="description" class="nexus-input" placeholder="e.g. 480MHz ARM Cortex-M7 Microcontroller" required>
+      </div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+        <div>
+          <label style="display: block; font-size: 0.75rem; color: var(--text-dim); margin-bottom: 4px;">Category *</label>
+          <select name="category" class="nexus-input">
+            <option value="Microcontroller">Microcontroller</option>
+            <option value="Power IC">Power IC</option>
+            <option value="Sensor">Sensor</option>
+            <option value="Passive">Passive (R/C/L)</option>
+            <option value="Connector">Connector</option>
+            <option value="Mechanical">Mechanical Enclosure</option>
+          </select>
+        </div>
+        <div>
+          <label style="display: block; font-size: 0.75rem; color: var(--text-dim); margin-bottom: 4px;">Supplier Name *</label>
+          <input type="text" name="supplier_name" class="nexus-input" placeholder="e.g. Mouser / DigiKey" required>
+        </div>
+      </div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 16px;">
+        <div>
+          <label style="display: block; font-size: 0.75rem; color: var(--text-dim); margin-bottom: 4px;">Qty Required *</label>
+          <input type="number" name="quantity_required" class="nexus-input" value="1" min="1" required>
+        </div>
+        <div>
+          <label style="display: block; font-size: 0.75rem; color: var(--text-dim); margin-bottom: 4px;">Unit Cost ($) *</label>
+          <input type="number" step="0.01" name="unit_cost" class="nexus-input" placeholder="10.50" required>
+        </div>
+        <div>
+          <label style="display: block; font-size: 0.75rem; color: var(--text-dim); margin-bottom: 4px;">Lead Time (Days)</label>
+          <input type="number" name="lead_time_days" class="nexus-input" value="7">
+        </div>
+      </div>
+      <div style="display: flex; justify-content: flex-end; gap: 8px;">
+        <button type="button" class="nexus-btn nexus-btn-secondary" onclick="closeModal('modal-add-bom')">Cancel</button>
+        <button type="submit" class="nexus-btn nexus-btn-primary">Add to BOM</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- MODAL: REGISTER PHYSICAL UNIT -->
+<div id="modal-add-unit" class="modal-overlay">
+  <div class="modal-container">
+    <div style="padding: 20px; border-bottom: 1px solid var(--border-subtle); display: flex; justify-content: space-between; align-items: center;">
+      <h3 style="color: #fff; font-size: 1.1rem; font-weight: 700;">Register Physical Build Unit</h3>
+      <button class="nexus-btn nexus-btn-secondary" style="padding: 2px 6px;" onclick="closeModal('modal-add-unit')">✕</button>
+    </div>
+    <form id="form-add-unit" style="padding: 20px;" onsubmit="handleAddUnit(event)">
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+        <div>
+          <label style="display: block; font-size: 0.75rem; color: var(--text-dim); margin-bottom: 4px;">Serial Number *</label>
+          <input type="text" name="serial_number" class="nexus-input" placeholder="e.g. AMR-SN-2026-003" required style="font-family: monospace;">
+        </div>
+        <div>
+          <label style="display: block; font-size: 0.75rem; color: var(--text-dim); margin-bottom: 4px;">Batch Number</label>
+          <input type="text" name="batch_number" class="nexus-input" value="BATCH-ALPHA-01">
+        </div>
+      </div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px;">
+        <div>
+          <label style="display: block; font-size: 0.75rem; color: var(--text-dim); margin-bottom: 4px;">Hardware Variant</label>
+          <input type="text" name="variant" class="nexus-input" value="Rev B Production">
+        </div>
+        <div>
+          <label style="display: block; font-size: 0.75rem; color: var(--text-dim); margin-bottom: 4px;">Assigned Assembly Tech</label>
+          <input type="text" name="assigned_technician" class="nexus-input" value="Sarah Jenkins">
+        </div>
+      </div>
+      <div style="display: flex; justify-content: flex-end; gap: 8px;">
+        <button type="button" class="nexus-btn nexus-btn-secondary" onclick="closeModal('modal-add-unit')">Cancel</button>
+        <button type="submit" class="nexus-btn nexus-btn-primary">Initialize Traveler</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- MODAL: UPDATE TRAVELER STEP -->
+<div id="modal-update-step" class="modal-overlay">
+  <div class="modal-container">
+    <div style="padding: 20px; border-bottom: 1px solid var(--border-subtle); display: flex; justify-content: space-between; align-items: center;">
+      <h3 style="color: #fff; font-size: 1.1rem; font-weight: 700;">Log Traveler Milestone Reading</h3>
+      <button class="nexus-btn nexus-btn-secondary" style="padding: 2px 6px;" onclick="closeModal('modal-update-step')">✕</button>
+    </div>
+    <form id="form-update-step" style="padding: 20px;" onsubmit="handleUpdateStep(event)">
+      <div style="margin-bottom: 12px;">
+        <span style="font-size: 0.75rem; color: var(--text-dim); text-transform: uppercase;">Step:</span>
+        <strong id="step-modal-name" style="font-size: 0.95rem; color: #38bdf8; display: block; margin-top: 2px;">-</strong>
+      </div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+        <div>
+          <label style="display: block; font-size: 0.75rem; color: var(--text-dim); margin-bottom: 4px;">Status Verdict *</label>
+          <select name="status" class="nexus-input">
+            <option value="Passed" selected>Passed</option>
+            <option value="In Progress">In Progress</option>
+            <option value="Failed">Failed</option>
+            <option value="Rework">Rework Required</option>
+          </select>
+        </div>
+        <div>
+          <label style="display: block; font-size: 0.75rem; color: var(--text-dim); margin-bottom: 4px;">Technician Sign *</label>
+          <input type="text" name="technician" class="nexus-input" value="Sarah Jenkins" required>
+        </div>
+      </div>
+      <div style="margin-bottom: 16px;">
+        <label style="display: block; font-size: 0.75rem; color: var(--text-dim); margin-bottom: 4px;">Measured Sensor / DMM / Torque Readings</label>
+        <input type="text" name="measured_values" class="nexus-input" placeholder="e.g. 3.32V, 5.03V, 12.01V, Torque 1.8 N·m">
+      </div>
+      <div style="display: flex; justify-content: flex-end; gap: 8px;">
+        <button type="button" class="nexus-btn nexus-btn-secondary" onclick="closeModal('modal-update-step')">Cancel</button>
+        <button type="submit" class="nexus-btn nexus-btn-primary">Save Milestone</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- MODAL: LOG DEFECT -->
+<div id="modal-log-defect" class="modal-overlay">
+  <div class="modal-container">
+    <div style="padding: 20px; border-bottom: 1px solid var(--border-subtle); display: flex; justify-content: space-between; align-items: center;">
+      <h3 style="color: #fff; font-size: 1.1rem; font-weight: 700;">Log Assembly Defect</h3>
+      <button class="nexus-btn nexus-btn-secondary" style="padding: 2px 6px;" onclick="closeModal('modal-log-defect')">✕</button>
+    </div>
+    <form id="form-log-defect" style="padding: 20px;" onsubmit="handleLogDefect(event)">
+      <div style="margin-bottom: 12px;">
+        <span style="font-size: 0.75rem; color: var(--text-dim);">Unit Serial:</span>
+        <strong id="defect-modal-serial" style="color: #ef4444; font-family: monospace; font-size: 0.95rem; margin-left: 6px;">-</strong>
+      </div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+        <div>
+          <label style="display: block; font-size: 0.75rem; color: var(--text-dim); margin-bottom: 4px;">Defect Type *</label>
+          <select name="defect_type" class="nexus-input">
+            <option value="Cold Solder Joint">Cold Solder Joint</option>
+            <option value="Solder Bridge / Short">Solder Bridge / Short</option>
+            <option value="Misaligned Component">Misaligned Component</option>
+            <option value="Harness Pinch">Harness Pinch</option>
+            <option value="Stripped Thread">Stripped Thread</option>
+          </select>
+        </div>
+        <div>
+          <label style="display: block; font-size: 0.75rem; color: var(--text-dim); margin-bottom: 4px;">Severity *</label>
+          <select name="severity" class="nexus-input">
+            <option value="Major">Major</option>
+            <option value="Critical">Critical</option>
+            <option value="Minor">Minor</option>
+          </select>
+        </div>
+      </div>
+      <div style="margin-bottom: 12px;">
+        <label style="display: block; font-size: 0.75rem; color: var(--text-dim); margin-bottom: 4px;">Description & Root Cause *</label>
+        <textarea name="description" class="nexus-input" rows="2" required placeholder="Describe observed non-conformance..."></textarea>
+      </div>
+      <div style="margin-bottom: 16px;">
+        <label style="display: block; font-size: 0.75rem; color: var(--text-dim); margin-bottom: 4px;">Logged By Technician</label>
+        <input type="text" name="logged_by" class="nexus-input" value="Sarah Jenkins">
+      </div>
+      <div style="display: flex; justify-content: flex-end; gap: 8px;">
+        <button type="button" class="nexus-btn nexus-btn-secondary" onclick="closeModal('modal-log-defect')">Cancel</button>
+        <button type="submit" class="nexus-btn nexus-btn-danger">Record Non-Conformance</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- MODAL: TAG FIRMWARE RELEASE -->
+<div id="modal-add-firmware" class="modal-overlay">
+  <div class="modal-container">
+    <div style="padding: 20px; border-bottom: 1px solid var(--border-subtle); display: flex; justify-content: space-between; align-items: center;">
+      <h3 style="color: #fff; font-size: 1.1rem; font-weight: 700;">Tag Firmware / Software Release</h3>
+      <button class="nexus-btn nexus-btn-secondary" style="padding: 2px 6px;" onclick="closeModal('modal-add-firmware')">✕</button>
+    </div>
+    <form id="form-add-firmware" style="padding: 20px;" onsubmit="handleAddFirmware(event)">
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+        <div>
+          <label style="display: block; font-size: 0.75rem; color: var(--text-dim); margin-bottom: 4px;">Target Subsystem *</label>
+          <input type="text" name="target_subsystem" class="nexus-input" placeholder="e.g. Safety MCU / Motor Driver" required>
+        </div>
+        <div>
+          <label style="display: block; font-size: 0.75rem; color: var(--text-dim); margin-bottom: 4px;">SemVer Version *</label>
+          <input type="text" name="version" class="nexus-input" placeholder="e.g. v1.3.0-rc1" required>
+        </div>
+      </div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+        <div>
+          <label style="display: block; font-size: 0.75rem; color: var(--text-dim); margin-bottom: 4px;">Git Commit Hash (SHA) *</label>
+          <input type="text" name="git_commit_hash" class="nexus-input" placeholder="40-char SHA" required style="font-family: monospace;">
+        </div>
+        <div>
+          <label style="display: block; font-size: 0.75rem; color: var(--text-dim); margin-bottom: 4px;">SHA-256 Binary Checksum *</label>
+          <input type="text" name="binary_checksum" class="nexus-input" placeholder="SHA-256 Checksum" required style="font-family: monospace;">
+        </div>
+      </div>
+      <div style="margin-bottom: 16px;">
+        <label style="display: block; font-size: 0.75rem; color: var(--text-dim); margin-bottom: 4px;">Release Notes & Bug Fixes</label>
+        <textarea name="release_notes" class="nexus-input" rows="2" placeholder="Summary of changes..."></textarea>
+      </div>
+      <div style="display: flex; justify-content: flex-end; gap: 8px;">
+        <button type="button" class="nexus-btn nexus-btn-secondary" onclick="closeModal('modal-add-firmware')">Cancel</button>
+        <button type="submit" class="nexus-btn nexus-btn-primary">Publish Release</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- MODAL: ADD TEST CHECKLIST -->
+<div id="modal-add-test" class="modal-overlay">
+  <div class="modal-container">
+    <div style="padding: 20px; border-bottom: 1px solid var(--border-subtle); display: flex; justify-content: space-between; align-items: center;">
+      <h3 style="color: #fff; font-size: 1.1rem; font-weight: 700;">Add Software / HIL Test Case</h3>
+      <button class="nexus-btn nexus-btn-secondary" style="padding: 2px 6px;" onclick="closeModal('modal-add-test')">✕</button>
+    </div>
+    <form id="form-add-test" style="padding: 20px;" onsubmit="handleAddTest(event)">
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+        <div>
+          <label style="display: block; font-size: 0.75rem; color: var(--text-dim); margin-bottom: 4px;">Test Suite *</label>
+          <select name="test_suite" class="nexus-input">
+            <option value="Hardware-In-The-Loop (HIL)">Hardware-In-The-Loop (HIL)</option>
+            <option value="CAN Bus Communication">CAN Bus Communication</option>
+            <option value="Safety Interlock Watchdog">Safety Interlock Watchdog</option>
+            <option value="Thermal Throttling Stress">Thermal Throttling Stress</option>
+            <option value="OTA Firmware Update">OTA Firmware Update</option>
+          </select>
+        </div>
+        <div>
+          <label style="display: block; font-size: 0.75rem; color: var(--text-dim); margin-bottom: 4px;">Gate Criticality</label>
+          <select name="is_critical" class="nexus-input">
+            <option value="true" selected>Critical (Blocks Dispatch Gate)</option>
+            <option value="false">Non-Critical</option>
+          </select>
+        </div>
+      </div>
+      <div style="margin-bottom: 12px;">
+        <label style="display: block; font-size: 0.75rem; color: var(--text-dim); margin-bottom: 4px;">Test Name *</label>
+        <input type="text" name="test_name" class="nexus-input" placeholder="e.g. Inverter Phase Short Protection Trigger < 5µs" required>
+      </div>
+      <div style="margin-bottom: 16px;">
+        <label style="display: block; font-size: 0.75rem; color: var(--text-dim); margin-bottom: 4px;">Expected Behavior *</label>
+        <input type="text" name="expected_result" class="nexus-input" placeholder="e.g. Gate drivers latch low without hardware damage" required>
+      </div>
+      <div style="display: flex; justify-content: flex-end; gap: 8px;">
+        <button type="button" class="nexus-btn nexus-btn-secondary" onclick="closeModal('modal-add-test')">Cancel</button>
+        <button type="submit" class="nexus-btn nexus-btn-primary">Add Test</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- MODAL: ISSUE QA CERTIFICATE -->
+<div id="modal-add-qacert" class="modal-overlay">
+  <div class="modal-container">
+    <div style="padding: 20px; border-bottom: 1px solid var(--border-subtle); display: flex; justify-content: space-between; align-items: center;">
+      <h3 style="color: #fff; font-size: 1.1rem; font-weight: 700;">Issue Final QA Certification</h3>
+      <button class="nexus-btn nexus-btn-secondary" style="padding: 2px 6px;" onclick="closeModal('modal-add-qacert')">✕</button>
+    </div>
+    <form id="form-add-qacert" style="padding: 20px;" onsubmit="handleAddQACert(event)">
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+        <div>
+          <label style="display: block; font-size: 0.75rem; color: var(--text-dim); margin-bottom: 4px;">Unit Serial Number *</label>
+          <input type="text" name="unit_serial" class="nexus-input" placeholder="e.g. AMR-SN-2026-001" required style="font-family: monospace;">
+        </div>
+        <div>
+          <label style="display: block; font-size: 0.75rem; color: var(--text-dim); margin-bottom: 4px;">Certificate Number *</label>
+          <input type="text" name="certificate_number" class="nexus-input" placeholder="e.g. QC-CERT-2026-900" required style="font-family: monospace;">
+        </div>
+      </div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+        <div>
+          <label style="display: block; font-size: 0.75rem; color: var(--text-dim); margin-bottom: 4px;">QA Inspector *</label>
+          <input type="text" name="inspector" class="nexus-input" value="Sarah Jenkins (QA Systems Inspector)" required>
+        </div>
+        <div>
+          <label style="display: block; font-size: 0.75rem; color: var(--text-dim); margin-bottom: 4px;">Compliance Standards</label>
+          <input type="text" name="compliance_standards" class="nexus-input" value="FCC Part 15 Class A, CE Mark, RoHS">
+        </div>
+      </div>
+      <div style="margin-bottom: 16px;">
+        <label style="display: block; font-size: 0.75rem; color: var(--text-dim); margin-bottom: 4px;">Calibration Offsets & Test Chamber Log</label>
+        <textarea name="calibration_data" class="nexus-input" rows="2" placeholder="e.g. Dielectric withstand 1.5kV passed. IMU offset: 0.001g."></textarea>
+      </div>
+      <div style="display: flex; justify-content: flex-end; gap: 8px;">
+        <button type="button" class="nexus-btn nexus-btn-secondary" onclick="closeModal('modal-add-qacert')">Cancel</button>
+        <button type="submit" class="nexus-btn nexus-btn-primary">Sign & Issue Certificate</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- MODAL: BOOK SHIPMENT -->
+<div id="modal-add-shipment" class="modal-overlay">
+  <div class="modal-container">
+    <div style="padding: 20px; border-bottom: 1px solid var(--border-subtle); display: flex; justify-content: space-between; align-items: center;">
+      <h3 style="color: #fff; font-size: 1.1rem; font-weight: 700;">Book Dispatch Shipment</h3>
+      <button class="nexus-btn nexus-btn-secondary" style="padding: 2px 6px;" onclick="closeModal('modal-add-shipment')">✕</button>
+    </div>
+    <form id="form-add-shipment" style="padding: 20px;" onsubmit="handleAddShipment(event)">
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+        <div>
+          <label style="display: block; font-size: 0.75rem; color: var(--text-dim); margin-bottom: 4px;">Unit Serial Number *</label>
+          <input type="text" name="unit_serial" class="nexus-input" placeholder="e.g. AMR-SN-2026-001" required style="font-family: monospace;">
+        </div>
+        <div>
+          <label style="display: block; font-size: 0.75rem; color: var(--text-dim); margin-bottom: 4px;">Logistics Carrier *</label>
+          <select name="carrier" class="nexus-input">
+            <option value="DHL Express">DHL Express</option>
+            <option value="FedEx Priority">FedEx Priority</option>
+            <option value="Freight Forwarder">Freight Forwarder</option>
+          </select>
+        </div>
+      </div>
+      <div style="margin-bottom: 12px;">
+        <label style="display: block; font-size: 0.75rem; color: var(--text-dim); margin-bottom: 4px;">Destination Client *</label>
+        <input type="text" name="destination_client" class="nexus-input" placeholder="e.g. Apex Industrial Robotics Corp" required>
+      </div>
+      <div style="margin-bottom: 12px;">
+        <label style="display: block; font-size: 0.75rem; color: var(--text-dim); margin-bottom: 4px;">Destination Address *</label>
+        <input type="text" name="destination_address" class="nexus-input" placeholder="e.g. 500 Technology Drive, San Jose, CA" required>
+      </div>
+      <div style="margin-bottom: 16px;">
+        <label style="display: block; font-size: 0.75rem; color: var(--text-dim); margin-bottom: 4px;">Tracking Number *</label>
+        <input type="text" name="tracking_number" class="nexus-input" placeholder="e.g. DHL-984719283-US" required style="font-family: monospace;">
+      </div>
+      <div style="display: flex; justify-content: flex-end; gap: 8px;">
+        <button type="button" class="nexus-btn nexus-btn-secondary" onclick="closeModal('modal-add-shipment')">Cancel</button>
+        <button type="submit" class="nexus-btn nexus-btn-primary">Confirm Dispatch</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- MODAL: ADVANCE STAGE GATE -->
+<div id="modal-advance-stage" class="modal-overlay">
+  <div class="modal-container">
+    <div style="padding: 20px; border-bottom: 1px solid var(--border-subtle); display: flex; justify-content: space-between; align-items: center;">
+      <h3 style="color: #fff; font-size: 1.15rem; font-weight: 700;">Stage Gate Verification: {{ project.code }}</h3>
+      <button class="nexus-btn nexus-btn-secondary" style="padding: 2px 6px;" onclick="closeModal('modal-advance-stage')">✕</button>
+    </div>
+    <form id="form-advance-stage" style="padding: 20px;" onsubmit="handleAdvanceStage(event)">
+      <div id="advance-modal-content">
+        <p style="color: var(--text-dim); font-size: 0.85rem;">Evaluating stage gate prerequisites...</p>
+      </div>
+      <div style="background: var(--bg-primary); border: 1px dashed var(--border-accent); border-radius: 8px; padding: 14px; margin-bottom: 20px;">
+        <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; font-size: 0.85rem; font-weight: 600; color: #f59e0b;">
+          <input type="checkbox" id="advance-override-check" name="override_checks" onchange="toggleOverrideReason(this.checked)">
+          Authorize Engineering Override (Bypass Blocking Gates)
+        </label>
+        <div id="advance-override-reason-box" style="display: none; margin-top: 12px;">
+          <label style="display: block; font-size: 0.72rem; text-transform: uppercase; color: var(--text-dim); margin-bottom: 6px; font-weight: 600;">Override Justification *</label>
+          <textarea name="override_reason" class="nexus-input" rows="2" placeholder="Document management authorization or risk mitigation plan..."></textarea>
+        </div>
+      </div>
+      <div style="display: flex; justify-content: flex-end; gap: 8px;">
+        <button type="button" class="nexus-btn nexus-btn-secondary" onclick="closeModal('modal-advance-stage')">Cancel</button>
+        <button type="submit" class="nexus-btn nexus-btn-primary">Confirm Stage Transition</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/project_cockpit.js') }}"></script>
+<script>
+  // Handlers for Cockpit Modals
+  async function handleAddCAD(e) {
+    e.preventDefault();
+    const form = e.target;
+    try {
+      const res = await fetch(`/api/v1/projects/${projectId}/design-docs`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: form.title.value,
+          doc_type: form.doc_type.value,
+          version: form.version.value,
+          subsystem: form.subsystem.value,
+          author: form.author.value
+        })
+      });
+      if (res.ok) {
+        showToast('CAD document registered!', 'success');
+        closeModal('modal-add-cad');
+        form.reset();
+        loadDesignDocs();
+        loadActivityLog();
+      }
+    } catch (err) { showToast('Error registering CAD', 'error'); }
+  }
+
+  async function handleAddECO(e) {
+    e.preventDefault();
+    const form = e.target;
+    try {
+      const res = await fetch(`/api/v1/projects/${projectId}/ecos`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          eco_number: form.eco_number.value,
+          title: form.title.value,
+          severity: form.severity.value,
+          reason: form.reason.value,
+          affected_subsystems: form.affected_subsystems.value,
+          description: form.description.value,
+          requested_by: '{{ project.lead_engineer }}'
+        })
+      });
+      if (res.ok) {
+        showToast('ECO raised successfully!', 'success');
+        closeModal('modal-add-eco');
+        form.reset();
+        loadECOs();
+        loadActivityLog();
+      }
+    } catch (err) { showToast('Error raising ECO', 'error'); }
+  }
+
+  async function handleAddBOM(e) {
+    e.preventDefault();
+    const form = e.target;
+    try {
+      const res = await fetch(`/api/v1/projects/${projectId}/bom`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          manufacturer_pn: form.manufacturer_pn.value,
+          part_number: form.part_number.value,
+          description: form.description.value,
+          category: form.category.value,
+          supplier_name: form.supplier_name.value,
+          quantity_required: parseInt(form.quantity_required.value),
+          unit_cost: parseFloat(form.unit_cost.value),
+          lead_time_days: parseInt(form.lead_time_days.value) || 7
+        })
+      });
+      if (res.ok) {
+        showToast('Component added to BOM!', 'success');
+        closeModal('modal-add-bom');
+        form.reset();
+        loadBOM();
+        loadActivityLog();
+      }
+    } catch (err) { showToast('Error adding BOM item', 'error'); }
+  }
+
+  async function handleAddUnit(e) {
+    e.preventDefault();
+    const form = e.target;
+    try {
+      const res = await fetch(`/api/v1/projects/${projectId}/units`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          serial_number: form.serial_number.value,
+          batch_number: form.batch_number.value,
+          variant: form.variant.value,
+          assigned_technician: form.assigned_technician.value
+        })
+      });
+      if (res.ok) {
+        showToast('Physical build unit registered with traveler!', 'success');
+        closeModal('modal-add-unit');
+        form.reset();
+        loadUnits();
+        loadActivityLog();
+      }
+    } catch (err) { showToast('Error registering unit', 'error'); }
+  }
+
+  async function handleAddFirmware(e) {
+    e.preventDefault();
+    const form = e.target;
+    try {
+      const res = await fetch(`/api/v1/projects/${projectId}/firmware`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          target_subsystem: form.target_subsystem.value,
+          version: form.version.value,
+          git_commit_hash: form.git_commit_hash.value,
+          binary_checksum: form.binary_checksum.value,
+          release_notes: form.release_notes.value,
+          created_by: '{{ project.lead_engineer }}'
+        })
+      });
+      if (res.ok) {
+        showToast('Firmware release tagged!', 'success');
+        closeModal('modal-add-firmware');
+        form.reset();
+        loadFirmwareAndTests();
+        loadActivityLog();
+      }
+    } catch (err) { showToast('Error tagging firmware', 'error'); }
+  }
+
+  async function handleAddTest(e) {
+    e.preventDefault();
+    const form = e.target;
+    try {
+      const res = await fetch(`/api/v1/projects/${projectId}/tests`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          test_suite: form.test_suite.value,
+          test_name: form.test_name.value,
+          expected_result: form.expected_result.value,
+          is_critical: form.is_critical.value === 'true'
+        })
+      });
+      if (res.ok) {
+        showToast('Test checklist added!', 'success');
+        closeModal('modal-add-test');
+        form.reset();
+        loadFirmwareAndTests();
+        loadActivityLog();
+      }
+    } catch (err) { showToast('Error adding test', 'error'); }
+  }
+
+  async function handleAddQACert(e) {
+    e.preventDefault();
+    const form = e.target;
+    try {
+      const res = await fetch(`/api/v1/projects/${projectId}/qa-cert`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          unit_serial: form.unit_serial.value,
+          certificate_number: form.certificate_number.value,
+          inspector: form.inspector.value,
+          compliance_standards: form.compliance_standards.value,
+          calibration_data: form.calibration_data.value
+        })
+      });
+      if (res.ok) {
+        showToast('Final QA Certificate issued!', 'success');
+        closeModal('modal-add-qacert');
+        form.reset();
+        loadDispatchData();
+        loadActivityLog();
+      }
+    } catch (err) { showToast('Error issuing QA cert', 'error'); }
+  }
+
+  async function handleAddShipment(e) {
+    e.preventDefault();
+    const form = e.target;
+    try {
+      const res = await fetch(`/api/v1/projects/${projectId}/shipments`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          unit_serial: form.unit_serial.value,
+          carrier: form.carrier.value,
+          destination_client: form.destination_client.value,
+          destination_address: form.destination_address.value,
+          tracking_number: form.tracking_number.value
+        })
+      });
+      if (res.ok) {
+        showToast('Dispatch shipment recorded!', 'success');
+        closeModal('modal-add-shipment');
+        form.reset();
+        loadDispatchData();
+        loadActivityLog();
+      }
+    } catch (err) { showToast('Error booking shipment', 'error'); }
+  }
+
+  // Load Gate Evaluation for Project Cockpit
+  document.addEventListener('DOMContentLoaded', async () => {
+    try {
+      const res = await fetch(`/api/v1/projects/${projectId}/gate-status`);
+      const gateData = await res.json();
+      const contentEl = document.getElementById('advance-modal-content');
+      if (contentEl) {
+        let blockersHtml = '';
+        if (gateData.can_advance) {
+          blockersHtml = `
+            <div style="background: rgba(16, 185, 129, 0.15); border: 1px solid #10b981; border-radius: 8px; padding: 12px; margin-bottom: 16px;">
+              <h4 style="color: #10b981; font-size: 0.9rem; font-weight: 600; margin-bottom: 4px;">✓ Stage Gate Verification Passed</h4>
+              <p style="font-size: 0.8rem; color: var(--text-main);">
+                Prerequisites satisfied to transition to <strong>${gateData.next_stage}</strong>.
+              </p>
+            </div>
+          `;
+        } else {
+          blockersHtml = `
+            <div style="background: rgba(239, 68, 68, 0.15); border: 1px solid #ef4444; border-radius: 8px; padding: 12px; margin-bottom: 16px;">
+              <h4 style="color: #ef4444; font-size: 0.9rem; font-weight: 600; margin-bottom: 6px;">⚠️ Stage Gate Incomplete (${gateData.blocking_reasons.length} Blocking Issues)</h4>
+              <ul style="font-size: 0.8rem; color: var(--text-main); margin-left: 18px; line-height: 1.5;">
+                ${gateData.blocking_reasons.map(r => `<li>${r}</li>`).join('')}
+              </ul>
+            </div>
+          `;
+        }
+        contentEl.innerHTML = `
+          <input type="hidden" name="target_stage" value="${gateData.next_stage || ''}">
+          <div style="margin-bottom: 14px;">
+            <p style="font-size: 0.85rem; color: var(--text-muted);">Current Stage: <strong style="color: #ffffff;">${gateData.current_stage}</strong></p>
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 4px;">Target Next Stage: <strong style="color: #38bdf8;">${gateData.next_stage || 'None (Completed)'}</strong></p>
+          </div>
+          ${blockersHtml}
+        `;
+      }
+    } catch (err) {}
+  });
+
+  async function handleAdvanceStage(e) {
+    e.preventDefault();
+    const form = e.target;
+    const targetStage = form.target_stage.value;
+    const override = form.override_checks.checked;
+    const overrideReason = form.override_reason ? form.override_reason.value.trim() : '';
+
+    if (override && !overrideReason) {
+      showToast('Engineering Override justification is required', 'warning');
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/v1/projects/${projectId}/advance-stage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          target_stage: targetStage,
+          override_checks: override,
+          override_reason: overrideReason,
+          performed_by: '{{ project.lead_engineer }}'
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Advance failed');
+      showToast(`Advanced to ${targetStage}!`, 'success');
+      setTimeout(() => window.location.reload(), 1000);
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
+  }
+
+  function toggleOverrideReason(checked) {
+    const box = document.getElementById('advance-override-reason-box');
+    if (box) box.style.display = checked ? 'block' : 'none';
+  }
+</script>
+{% endblock %}
+

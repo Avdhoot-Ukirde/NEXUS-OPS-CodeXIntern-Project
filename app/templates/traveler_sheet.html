@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Manufacturing Traveler Sheet - {{ unit.serial_number }}</title>
+  <style>
+    @media print {
+      body { background: #fff !important; color: #000 !important; }
+      .no-print { display: none !important; }
+      .page-break { page-break-after: always; }
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      margin: 20px auto;
+      max-width: 900px;
+      color: #1e293b;
+      background: #f8fafc;
+      padding: 24px;
+    }
+    .traveler-container {
+      background: #ffffff;
+      border: 2px solid #0f172a;
+      padding: 24px;
+      box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+    }
+    .header-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 20px;
+      border: 2px solid #0f172a;
+    }
+    .header-table td {
+      border: 1px solid #0f172a;
+      padding: 8px 12px;
+      font-size: 0.85rem;
+    }
+    .header-table td strong {
+      display: block;
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      color: #64748b;
+    }
+    .milestone-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 24px;
+    }
+    .milestone-table th, .milestone-table td {
+      border: 1px solid #cbd5e1;
+      padding: 10px 12px;
+      font-size: 0.85rem;
+      text-align: left;
+    }
+    .milestone-table th {
+      background: #0f172a;
+      color: #ffffff;
+      text-transform: uppercase;
+      font-size: 0.72rem;
+      letter-spacing: 0.05em;
+    }
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-weight: 700;
+      font-size: 0.75rem;
+    }
+    .badge-passed { background: #dcfce7; color: #15803d; border: 1px solid #86efac; }
+    .badge-pending { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; }
+    .badge-failed { background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; }
+    .qa-box {
+      border: 2px dashed #0f172a;
+      padding: 16px;
+      margin-top: 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .btn-print {
+      background: #2563eb;
+      color: #fff;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 6px;
+      font-weight: 600;
+      cursor: pointer;
+      margin-bottom: 20px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="no-print" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+    <a href="/projects/{{ project.id }}" style="color: #2563eb; text-decoration: none; font-weight: 600;">← Back to Project Cockpit</a>
+    <button class="btn-print" onclick="window.print()">Print Traveler Sheet 🖨️</button>
+  </div>
+
+  <div class="traveler-container">
+    <!-- Header Title -->
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px;">
+      <div>
+        <div style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #64748b;">NEXUS-OPS Manufacturing Operations</div>
+        <h1 style="font-size: 1.5rem; font-weight: 800; margin: 2px 0 4px 0; color: #0f172a;">SHOP-FLOOR PHYSICAL TRAVELER SHEET</h1>
+        <div style="font-size: 0.85rem; color: #334155;">Standard Operating Procedure & Component Inspection Traveler</div>
+      </div>
+      <div style="text-align: right;">
+        <div style="font-family: monospace; font-size: 1.25rem; font-weight: 800; color: #0f172a; letter-spacing: 0.05em; border: 2px solid #0f172a; padding: 4px 10px; display: inline-block;">
+          {{ unit.serial_number }}
+        </div>
+        <div style="font-size: 0.7rem; color: #64748b; margin-top: 4px;">BARCODE / SERIAL IDENTIFIER</div>
+      </div>
+    </div>
+
+    <!-- Metadata Grid -->
+    <table class="header-table">
+      <tr>
+        <td style="width: 25%;">
+          <strong>Project Code</strong>
+          {{ project.code }}
+        </td>
+        <td style="width: 50%;">
+          <strong>Project Name</strong>
+          {{ project.name }}
+        </td>
+        <td style="width: 25%;">
+          <strong>Hardware Variant</strong>
+          {{ unit.variant }}
+        </td>
+      </tr>
+      <tr>
+        <td>
+          <strong>Batch Number</strong>
+          {{ unit.batch_number }}
+        </td>
+        <td>
+          <strong>Lead Systems Engineer</strong>
+          {{ project.lead_engineer }}
+        </td>
+        <td>
+          <strong>Assigned Assembly Tech</strong>
+          {{ unit.assigned_technician }}
+        </td>
+      </tr>
+      <tr>
+        <td>
+          <strong>Traveler Creation Date</strong>
+          {{ unit.created_at.strftime('%Y-%m-%d %H:%M') if unit.created_at else '-' }}
+        </td>
+        <td>
+          <strong>Traveler Status</strong>
+          <span style="font-weight: 700; text-transform: uppercase;">{{ unit.build_stage }}</span>
+        </td>
+        <td>
+          <strong>Defects Recorded</strong>
+          {{ unit.defects.count() }} Non-Conformance(s)
+        </td>
+      </tr>
+    </table>
+
+    <!-- Traveler Steps Table -->
+    <h3 style="font-size: 1rem; font-weight: 700; text-transform: uppercase; margin-bottom: 8px; color: #0f172a;">Assembly & Inspection Milestones</h3>
+    <table class="milestone-table">
+      <thead>
+        <tr>
+          <th style="width: 6%;">#</th>
+          <th style="width: 28%;">Inspection Operation</th>
+          <th style="width: 30%;">Quality Acceptance Criteria</th>
+          <th style="width: 18%;">Measured Values / Logs</th>
+          <th style="width: 9%;">Status</th>
+          <th style="width: 9%;">Sign / Date</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for step in unit.traveler_steps.order_by('step_order') %}
+        <tr>
+          <td><strong>{{ step.step_order }}</strong></td>
+          <td><strong>{{ step.name }}</strong></td>
+          <td style="font-size: 0.78rem; color: #475569;">{{ step.inspection_criteria or 'IPC-A-610 Workmanship standard.' }}</td>
+          <td style="font-family: monospace; font-size: 0.78rem; color: #0369a1;">
+            {{ step.measured_values or '—' }}
+          </td>
+          <td>
+            <span class="badge {{ 'badge-passed' if step.status == 'Passed' else ('badge-failed' if step.status == 'Failed' else 'badge-pending') }}">
+              {{ step.status }}
+            </span>
+          </td>
+          <td style="font-size: 0.72rem; color: #334155;">
+            {{ step.technician }}<br>
+            <span style="color: #64748b;">{{ step.completed_at.strftime('%m/%d %H:%M') if step.completed_at else 'Pending' }}</span>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <!-- Defect & Rework Record -->
+    {% if unit.defects.count() > 0 %}
+    <h3 style="font-size: 0.95rem; font-weight: 700; text-transform: uppercase; margin: 16px 0 8px 0; color: #b91c1c;">Defects & Rework Dispositions</h3>
+    <table class="milestone-table">
+      <thead>
+        <tr>
+          <th>Defect Classification</th>
+          <th>Severity</th>
+          <th>Description & Root Cause</th>
+          <th>Disposition</th>
+          <th>Logged By</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for d in unit.defects %}
+        <tr>
+          <td><strong>{{ d.defect_type }}</strong></td>
+          <td><span style="color: #b91c1c; font-weight: 700;">{{ d.severity }}</span></td>
+          <td>{{ d.description }}</td>
+          <td><strong>{{ d.disposition }}</strong></td>
+          <td>{{ d.logged_by }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% endif %}
+
+    <!-- Final QA Stamp Box -->
+    <div class="qa-box">
+      <div>
+        <div style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: #64748b;">Final Quality Assurance Verification</div>
+        <div style="font-size: 0.9rem; font-weight: 700; color: #0f172a; margin-top: 4px;">
+          Certified IPC-A-610 Class 2 & ESD S20.20 Conformance
+        </div>
+        <div style="font-size: 0.75rem; color: #64748b; margin-top: 2px;">
+          Unit passed all stage checks and is authorized for firmware staging.
+        </div>
+      </div>
+      <div style="border: 2px solid #0f172a; width: 140px; height: 70px; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 800; color: #0f172a; text-transform: uppercase; letter-spacing: 0.05em; text-align: center;">
+        QA STAMP<br>AUTHORIZED
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>
+

@@ -1,0 +1,244 @@
+{% extends "base.html" %}
+
+{% block title %}Executive Engineering Dashboard | NEXUS-OPS{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 24px;">
+  <div style="display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 12px; margin-bottom: 20px;">
+    <div>
+      <h1 style="font-size: 1.75rem; font-weight: 800; color: #ffffff; letter-spacing: -0.02em;">Hardware & Software Engineering Operations</h1>
+      <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 4px;">
+        Centralized lifecycle tracking across CAD, BOM Procurement, Shop-Floor Assembly, Firmware Testing, and QA Dispatch.
+      </p>
+    </div>
+    <div style="display: flex; gap: 10px;">
+      <button class="nexus-btn nexus-btn-primary" onclick="openModal('modal-create-project')">
+        <span>+ Initialize New Project</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Executive KPIs Metric Cards -->
+  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; margin-bottom: 24px;">
+    <!-- Card 1 -->
+    <div class="nexus-card" style="padding: 16px;">
+      <div style="font-size: 0.75rem; text-transform: uppercase; color: var(--text-dim); font-weight: 600; letter-spacing: 0.05em;">Active Systems Projects</div>
+      <div style="display: flex; align-items: baseline; justify-content: space-between; margin-top: 8px;">
+        <span id="kpi-total-projects" style="font-size: 2rem; font-weight: 800; color: #ffffff;">-</span>
+        <span style="font-size: 0.75rem; color: #38bdf8; background: rgba(56,189,248,0.1); padding: 2px 6px; border-radius: 4px;">5 Stages Active</span>
+      </div>
+      <div style="font-size: 0.75rem; color: var(--text-dim); margin-top: 4px;">End-to-end integration</div>
+    </div>
+
+    <!-- Card 2 -->
+    <div class="nexus-card" style="padding: 16px;">
+      <div style="font-size: 0.75rem; text-transform: uppercase; color: var(--text-dim); font-weight: 600; letter-spacing: 0.05em;">BOM Procurement Readiness</div>
+      <div style="display: flex; align-items: baseline; justify-content: space-between; margin-top: 8px;">
+        <span id="kpi-bom-readiness" style="font-size: 2rem; font-weight: 800; color: #fbbf24;">-%</span>
+        <span style="font-size: 0.75rem; color: #fbbf24; background: rgba(251,191,36,0.1); padding: 2px 6px; border-radius: 4px;">Target: 80%+</span>
+      </div>
+      <div style="font-size: 0.75rem; color: var(--text-dim); margin-top: 4px;">Delivered components vs required</div>
+    </div>
+
+    <!-- Card 3 -->
+    <div class="nexus-card" style="padding: 16px;">
+      <div style="font-size: 0.75rem; text-transform: uppercase; color: var(--text-dim); font-weight: 600; letter-spacing: 0.05em;">Firmware & HIL Pass Rate</div>
+      <div style="display: flex; align-items: baseline; justify-content: space-between; margin-top: 8px;">
+        <span id="kpi-test-passrate" style="font-size: 2rem; font-weight: 800; color: #34d399;">-%</span>
+        <span style="font-size: 0.75rem; color: #34d399; background: rgba(52,211,153,0.1); padding: 2px 6px; border-radius: 4px;">Automated & Bench</span>
+      </div>
+      <div style="font-size: 0.75rem; color: var(--text-dim); margin-top: 4px;">Critical safety & comm tests</div>
+    </div>
+
+    <!-- Card 4 -->
+    <div class="nexus-card" style="padding: 16px;">
+      <div style="font-size: 0.75rem; text-transform: uppercase; color: var(--text-dim); font-weight: 600; letter-spacing: 0.05em;">Total Spend / Budget</div>
+      <div style="display: flex; align-items: baseline; justify-content: space-between; margin-top: 8px;">
+        <span id="kpi-total-budget" style="font-size: 1.6rem; font-weight: 800; color: #ffffff;">-</span>
+        <span style="font-size: 0.75rem; color: #10b981; background: rgba(16,185,129,0.1); padding: 2px 6px; border-radius: 4px;">Within Allocation</span>
+      </div>
+      <div style="font-size: 0.75rem; color: var(--text-dim); margin-top: 4px;">Hardware BOM + NRE costs</div>
+    </div>
+  </div>
+
+  <!-- Stage Funnel Visualizer -->
+  <div class="nexus-card" style="padding: 16px; margin-bottom: 24px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+      <span style="font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted);">
+        Systems Engineering Lifecycle Pipeline
+      </span>
+      <span style="font-size: 0.75rem; color: var(--text-dim);">Gate transitions require prerequisite verification</span>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px;">
+      <div style="background: var(--bg-primary); border-left: 3px solid var(--stage-design); padding: 10px; border-radius: 6px;">
+        <div style="font-size: 0.7rem; color: var(--stage-design); font-weight: 600;">STAGE 1</div>
+        <div style="font-size: 0.95rem; font-weight: 700;">Design</div>
+        <div style="font-size: 1.25rem; font-weight: 800; margin-top: 4px;" id="funnel-count-design">0</div>
+        <div style="font-size: 0.68rem; color: var(--text-dim);">CAD & Schematics</div>
+      </div>
+
+      <div style="background: var(--bg-primary); border-left: 3px solid var(--stage-purchase); padding: 10px; border-radius: 6px;">
+        <div style="font-size: 0.7rem; color: var(--stage-purchase); font-weight: 600;">STAGE 2</div>
+        <div style="font-size: 0.95rem; font-weight: 700;">Purchase</div>
+        <div style="font-size: 1.25rem; font-weight: 800; margin-top: 4px;" id="funnel-count-purchase">0</div>
+        <div style="font-size: 0.68rem; color: var(--text-dim);">BOM Readiness & Lead Times</div>
+      </div>
+
+      <div style="background: var(--bg-primary); border-left: 3px solid var(--stage-assembly); padding: 10px; border-radius: 6px;">
+        <div style="font-size: 0.7rem; color: var(--stage-assembly); font-weight: 600;">STAGE 3</div>
+        <div style="font-size: 0.95rem; font-weight: 700;">Assembly</div>
+        <div style="font-size: 1.25rem; font-weight: 800; margin-top: 4px;" id="funnel-count-assembly">0</div>
+        <div style="font-size: 0.68rem; color: var(--text-dim);">Shop Traveler & Defects</div>
+      </div>
+
+      <div style="background: var(--bg-primary); border-left: 3px solid var(--stage-software); padding: 10px; border-radius: 6px;">
+        <div style="font-size: 0.7rem; color: var(--stage-software); font-weight: 600;">STAGE 4</div>
+        <div style="font-size: 0.95rem; font-weight: 700;">Software</div>
+        <div style="font-size: 1.25rem; font-weight: 800; margin-top: 4px;" id="funnel-count-software">0</div>
+        <div style="font-size: 0.68rem; color: var(--text-dim);">Firmware & HIL Checklists</div>
+      </div>
+
+      <div style="background: var(--bg-primary); border-left: 3px solid var(--stage-dispatch); padding: 10px; border-radius: 6px;">
+        <div style="font-size: 0.7rem; color: var(--stage-dispatch); font-weight: 600;">STAGE 5</div>
+        <div style="font-size: 0.95rem; font-weight: 700;">Dispatch</div>
+        <div style="font-size: 1.25rem; font-weight: 800; margin-top: 4px;" id="funnel-count-dispatch">0</div>
+        <div style="font-size: 0.68rem; color: var(--text-dim);">QA Certification & Shipping</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Search and Filter Bar -->
+  <div style="display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap;">
+    <div style="flex: 1; min-width: 250px;">
+      <input type="text" id="search-input" class="nexus-input" placeholder="Search by Project code (e.g. PRJ-ROBOT-01), name, or engineer...">
+    </div>
+    <div style="width: 170px;">
+      <select id="filter-stage" class="nexus-input">
+        <option value="">All Lifecycle Stages</option>
+        <option value="Design">1. Design</option>
+        <option value="Purchase">2. Purchase</option>
+        <option value="Assembly">3. Assembly</option>
+        <option value="Software">4. Software</option>
+        <option value="Dispatch">5. Dispatch</option>
+        <option value="Completed">✓ Completed</option>
+      </select>
+    </div>
+    <div style="width: 160px;">
+      <select id="filter-health" class="nexus-input">
+        <option value="">All Health Statuses</option>
+        <option value="On Track">On Track</option>
+        <option value="At Risk">At Risk</option>
+        <option value="Delayed">Delayed</option>
+        <option value="Blocked">Blocked</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Projects Dynamic List Container -->
+  <div id="projects-container">
+    <div style="text-align: center; padding: 40px; color: var(--text-dim);">
+      Loading engineering projects...
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: CREATE PROJECT -->
+<div id="modal-create-project" class="modal-overlay">
+  <div class="modal-container">
+    <div style="padding: 20px 24px; border-bottom: 1px solid var(--border-subtle); display: flex; justify-content: space-between; align-items: center;">
+      <h3 style="font-size: 1.15rem; font-weight: 700; color: #ffffff;">Initialize Integrated Engineering Project</h3>
+      <button class="nexus-btn nexus-btn-secondary" style="padding: 4px 8px; font-size: 0.8rem;" onclick="closeModal('modal-create-project')">✕</button>
+    </div>
+    <form id="form-create-project" style="padding: 24px;">
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px;">
+        <div>
+          <label style="display: block; font-size: 0.75rem; text-transform: uppercase; color: var(--text-dim); margin-bottom: 6px; font-weight: 600;">Project Code *</label>
+          <input type="text" name="code" class="nexus-input" placeholder="e.g. PRJ-UAV-05" required style="font-family: monospace;">
+        </div>
+        <div>
+          <label style="display: block; font-size: 0.75rem; text-transform: uppercase; color: var(--text-dim); margin-bottom: 6px; font-weight: 600;">Priority Level</label>
+          <select name="priority" class="nexus-input">
+            <option value="Critical">Critical</option>
+            <option value="High" selected>High</option>
+            <option value="Medium">Medium</option>
+            <option value="Low">Low</option>
+          </select>
+        </div>
+      </div>
+
+      <div style="margin-bottom: 14px;">
+        <label style="display: block; font-size: 0.75rem; text-transform: uppercase; color: var(--text-dim); margin-bottom: 6px; font-weight: 600;">Project Name *</label>
+        <input type="text" name="name" class="nexus-input" placeholder="e.g. Autonomous Subsea Pipeline Survey Drone" required>
+      </div>
+
+      <div style="margin-bottom: 14px;">
+        <label style="display: block; font-size: 0.75rem; text-transform: uppercase; color: var(--text-dim); margin-bottom: 6px; font-weight: 600;">Description & Scope</label>
+        <textarea name="description" class="nexus-input" rows="3" placeholder="Outline integrated hardware subsystems, embedded architecture, and target deliverables..."></textarea>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 20px;">
+        <div>
+          <label style="display: block; font-size: 0.75rem; text-transform: uppercase; color: var(--text-dim); margin-bottom: 6px; font-weight: 600;">Lead Systems Engineer *</label>
+          <input type="text" name="lead_engineer" class="nexus-input" placeholder="e.g. Dr. Elena Rostova" required>
+        </div>
+        <div>
+          <label style="display: block; font-size: 0.75rem; text-transform: uppercase; color: var(--text-dim); margin-bottom: 6px; font-weight: 600;">Target Completion Date</label>
+          <input type="date" name="target_date" class="nexus-input">
+        </div>
+      </div>
+
+      <div style="margin-bottom: 24px;">
+        <label style="display: block; font-size: 0.75rem; text-transform: uppercase; color: var(--text-dim); margin-bottom: 6px; font-weight: 600;">Approved Budget ($ USD)</label>
+        <input type="number" name="budget" class="nexus-input" placeholder="50000" step="1000" min="0">
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; gap: 10px;">
+        <button type="button" class="nexus-btn nexus-btn-secondary" onclick="closeModal('modal-create-project')">Cancel</button>
+        <button type="submit" class="nexus-btn nexus-btn-primary">Initialize Project</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- MODAL: ADVANCE STAGE GATE -->
+<div id="modal-advance-stage" class="modal-overlay">
+  <div class="modal-container">
+    <div style="padding: 20px 24px; border-bottom: 1px solid var(--border-subtle); display: flex; justify-content: space-between; align-items: center;">
+      <h3 id="advance-modal-title" style="font-size: 1.15rem; font-weight: 700; color: #ffffff;">Stage Gate Verification</h3>
+      <button class="nexus-btn nexus-btn-secondary" style="padding: 4px 8px; font-size: 0.8rem;" onclick="closeModal('modal-advance-stage')">✕</button>
+    </div>
+    <form id="form-advance-stage" style="padding: 24px;">
+      <input type="hidden" id="advance-target-stage" name="target_stage">
+      
+      <!-- Live evaluated blockers & warnings loaded dynamically -->
+      <div id="advance-modal-content">
+        <p style="color: var(--text-dim); font-size: 0.85rem;">Evaluating stage gate prerequisites...</p>
+      </div>
+
+      <!-- Override Section -->
+      <div style="background: var(--bg-primary); border: 1px dashed var(--border-accent); border-radius: 8px; padding: 14px; margin-bottom: 20px;">
+        <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; font-size: 0.85rem; font-weight: 600; color: #f59e0b;">
+          <input type="checkbox" id="advance-override-check" name="override_checks" onchange="toggleOverrideReason(this.checked)">
+          Authorize Engineering Override (Bypass Blocking Gates)
+        </label>
+        
+        <div id="advance-override-reason-box" style="display: none; margin-top: 12px;">
+          <label style="display: block; font-size: 0.72rem; text-transform: uppercase; color: var(--text-dim); margin-bottom: 6px; font-weight: 600;">Override Justification & Risk Mitigation Plan *</label>
+          <textarea name="override_reason" class="nexus-input" rows="2" placeholder="Document management authorization, mitigation steps, or pilot release justification..."></textarea>
+        </div>
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; gap: 10px;">
+        <button type="button" class="nexus-btn nexus-btn-secondary" onclick="closeModal('modal-advance-stage')">Cancel</button>
+        <button type="submit" class="nexus-btn nexus-btn-primary">Confirm Stage Transition</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/app.js') }}"></script>
+{% endblock %}
+
